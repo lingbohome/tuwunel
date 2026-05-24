@@ -2827,12 +2827,13 @@ pub struct WellKnownConfig {
 	/// The URL of the support web page. This and the below generate the content
 	/// of `/.well-known/matrix/support`.
 	///
+	/// reloadable: yes
 	/// example: "https://example.com/support"
 	pub support_page: Option<Url>,
 
 	/// The name of the support role.
 	///
-	///
+	/// reloadable: yes
 	/// display: hidden
 	// This config option is hidden because [global.well_known.support_contact.<ID>] should be
 	// used instead. However for compatibility purposes the config option will still function and
@@ -2841,7 +2842,7 @@ pub struct WellKnownConfig {
 
 	/// The email address for the above support role.
 	///
-	///
+	/// reloadable: yes
 	/// display: hidden
 	// This config option is hidden because [global.well_known.support_contact.<ID>] should be
 	// used instead. However for compatibility purposes the config option will still function and
@@ -2850,6 +2851,7 @@ pub struct WellKnownConfig {
 
 	/// The Matrix User ID for the above support role.
 	///
+	/// reloadable: yes
 	/// display: hidden
 	// This config option is hidden because [global.well_known.support_contact.<ID>] should be
 	// used instead. However for compatibility purposes the config option will still function and
@@ -2867,6 +2869,7 @@ pub struct WellKnownConfig {
 	/// As this is a spec proposal (MSC4439), the identifier/prefix for this
 	/// field is currently "dev.zirco.msc4439.pgp_key"
 	///
+	/// reloadable: yes
 	/// display: hidden
 	// This config option is hidden because [global.well_known.support_contact.<ID>] should be
 	// used instead. However for compatibility purposes the config option will still function and
@@ -2981,16 +2984,19 @@ impl From<SupportPolicyTranslation>
 pub struct SupportContact {
 	/// The name of the support role.
 	///
+	/// reloadable: yes
 	/// example: "m.role.admin"
 	pub role: ContactRole,
 
 	/// The email address for the above support role.
 	///
+	/// reloadable: yes
 	/// example: "admin@example.com"
 	pub email_address: Option<String>,
 
 	/// The Matrix User ID for the above support role.
 	///
+	/// reloadable: yes
 	/// example "@admin:example.com"
 	pub matrix_id: Option<OwnedUserId>,
 
@@ -3005,6 +3011,7 @@ pub struct SupportContact {
 	/// As this is a spec proposal (MSC4439), the identifier/prefix for this
 	/// field is currently "dev.zirco.msc4439.pgp_key"
 	///
+	/// reloadable: yes
 	/// example: "openpgp4fpr:8B77919975EAFA5E2456EE03665FE73077489DB0"
 	pub pgp_key: Option<String>,
 }

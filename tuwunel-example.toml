@@ -2538,18 +2538,21 @@
 
 # The name of the support role.
 #
+# reloadable: yes
 # example: "m.role.admin"
 #
 #role =
 
 # The email address for the above support role.
 #
+# reloadable: yes
 # example: "admin@example.com"
 #
 #email_address =
 
 # The Matrix User ID for the above support role.
 #
+# reloadable: yes
 # example "@admin:example.com"
 #
 #matrix_id =
@@ -2565,6 +2568,7 @@
 # As this is a spec proposal (MSC4439), the identifier/prefix for this
 # field is currently "dev.zirco.msc4439.pgp_key"
 #
+# reloadable: yes
 # example: "openpgp4fpr:8B77919975EAFA5E2456EE03665FE73077489DB0"
 #
 #pgp_key =
