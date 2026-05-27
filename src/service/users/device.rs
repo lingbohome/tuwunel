@@ -11,17 +11,15 @@ use ruma::{
 };
 use serde_json::json;
 use tuwunel_core::{
-	Err, Result, at, implement, trace,
+	Err, Result, implement, trace,
 	utils::{
 		self, BoolExt, ReadyExt,
 		stream::{IterStream, TryIgnore},
 		string::to_small_string,
-		time::{
-			duration_since_epoch, timepoint_from_epoch, timepoint_from_now, timepoint_has_passed,
-		},
+		time::{duration_since_epoch, timepoint_from_epoch, timepoint_from_now},
 	},
 };
-use tuwunel_database::{Cbor, Deserialized, Ignore, Interfix, Json, Map};
+use tuwunel_database::{Deserialized, Ignore, Interfix, Json, Map};
 
 /// generated device ID length
 const DEVICE_ID_LENGTH: usize = 10;
@@ -116,6 +114,7 @@ pub async fn remove_device(&self, user_id: &UserId, device_id: &DeviceId) {
 
 	let userdeviceid = (user_id, device_id);
 	self.db.userdeviceid_metadata.del(userdeviceid);
+	#[cfg(feature = "oauth")]
 	self.db.oidcdevice_userdeviceid.del(userdeviceid);
 
 	self.mark_device_key_update(user_id).await;
@@ -508,6 +507,7 @@ pub async fn device_exists(&self, user_id: &UserId, device_id: &DeviceId) -> boo
 		.await
 }
 
+#[cfg(feature = "oauth")]
 #[implement(super::Service)]
 pub async fn is_oidc_device(&self, user_id: &UserId, device_id: &DeviceId) -> bool {
 	self.db
@@ -518,6 +518,7 @@ pub async fn is_oidc_device(&self, user_id: &UserId, device_id: &DeviceId) -> bo
 
 /// Returns the IdP that originally authenticated this device, if known.
 /// Returns `None` for devices predating the idp_id field or non-OIDC devices.
+#[cfg(feature = "oauth")]
 #[implement(super::Service)]
 pub async fn get_oidc_device_idp(
 	&self,
@@ -533,6 +534,7 @@ pub async fn get_oidc_device_idp(
 		.map(|Json(idp)| idp)
 }
 
+#[cfg(feature = "oauth")]
 #[implement(super::Service)]
 pub fn mark_oidc_device(&self, user_id: &UserId, device_id: &DeviceId, idp_id: &str) {
 	self.db
@@ -542,9 +544,12 @@ pub fn mark_oidc_device(&self, user_id: &UserId, device_id: &DeviceId, idp_id: &
 
 /// Allow cross-signing key replacement without UIAA for the next 10 minutes.
 /// Returns the expiry timestamp in milliseconds.
+#[cfg(feature = "oauth")]
 #[allow(clippy::must_use_candidate)]
 #[implement(super::Service)]
 pub fn allow_cross_signing_replacement(&self, user_id: &UserId) -> SystemTime {
+	use tuwunel_database::Cbor;
+
 	let duration = Duration::from_mins(10);
 	let expires = timepoint_from_now(duration).expect("failed to create timepoint from now");
 
@@ -556,8 +561,12 @@ pub fn allow_cross_signing_replacement(&self, user_id: &UserId) -> SystemTime {
 }
 
 /// Check if the user is allowed to replace cross-signing keys without UIAA.
+#[cfg(feature = "oauth")]
 #[implement(super::Service)]
 pub async fn can_replace_cross_signing_keys(&self, user_id: &UserId) -> bool {
+	use tuwunel_core::{at, utils::timepoint_has_passed};
+	use tuwunel_database::Cbor;
+
 	let Ok(expires): Result<SystemTime, _> = self
 		.db
 		.oidccskeybypass_userid

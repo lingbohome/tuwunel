@@ -9,7 +9,7 @@ pub mod state;
 use axum::{
 	Router,
 	response::IntoResponse,
-	routing::{any, get, post},
+	routing::{any, get},
 };
 pub use client_ip::{ConfiguredIpSource, TrustedPeerSubnets};
 use tuwunel_core::{Server, err};
@@ -19,7 +19,7 @@ pub(super) use self::{
 	args::Args as Ruma, auth::auth_uiaa, client_ip::ClientIp, response::RumaResponse,
 	state::State,
 };
-use crate::{client, oidc, server};
+use crate::{client, server};
 
 pub fn build(router: Router<State>, server: &Server) -> Router<State> {
 	let config = &server.config;
@@ -30,9 +30,11 @@ pub fn build(router: Router<State>, server: &Server) -> Router<State> {
 	let router = register_client_state_and_sync_routes(router);
 	let router = register_client_media_and_device_routes(router);
 	let router = register_client_misc_routes(router);
-	let router = register_oidc_routes(router);
 	let router = register_server_misc_routes(router);
 	let router = register_federation_routes(router, config.allow_federation);
+
+	#[cfg(feature = "oauth")]
+	let router = register_oidc_routes(router);
 
 	register_legacy_media_routes(router, config.allow_legacy_media)
 }
@@ -46,10 +48,6 @@ fn register_client_auth_routes(router: Router<State>) -> Router<State> {
 		.ruma_route(&client::login_route)
 		.ruma_route(&client::login_token_route)
 		.ruma_route(&client::refresh_token_route)
-		.ruma_route(&client::sso_login_route)
-		.ruma_route(&client::sso_login_with_provider_route)
-		.ruma_route(&client::sso_callback_route)
-		.ruma_route(&client::sso_fallback_route)
 		.ruma_route(&client::whoami_route)
 		.ruma_route(&client::logout_route)
 		.ruma_route(&client::logout_all_route)
@@ -250,9 +248,18 @@ fn register_client_misc_routes(router: Router<State>) -> Router<State> {
 		.route("/_tuwunel/server_version", get(client::tuwunel_server_version))
 }
 
+#[cfg(feature = "oauth")]
 fn register_oidc_routes(router: Router<State>) -> Router<State> {
-	// OIDC server endpoints (next-gen auth, MSC2965/2964/2966/2967)
+	use axum::routing::post;
+
+	use crate::oidc;
+
 	router
+		.ruma_route(&client::sso_login_route)
+		.ruma_route(&client::sso_login_with_provider_route)
+		.ruma_route(&client::sso_callback_route)
+		.ruma_route(&client::sso_fallback_route)
+		// OIDC server endpoints (next-gen auth, MSC2965/2964/2966/2967)
 		.route("/_tuwunel/oidc/registration", post(oidc::registration_route))
 		.route("/_tuwunel/oidc/authorize", get(oidc::authorize_route))
 		.route("/_tuwunel/oidc/_complete", get(oidc::complete_route))

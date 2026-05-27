@@ -58,6 +58,9 @@ lz4_compression = [
 	"tuwunel-database/lz4_compression",
 	"tuwunel-service/lz4_compression",
 ]
+oauth = [
+	"tuwunel-service/oauth",
+]
 release_max_log_level = [
 	"tuwunel-core/release_max_log_level",
 	"tuwunel-database/release_max_log_level",

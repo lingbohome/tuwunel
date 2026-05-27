@@ -25,6 +25,7 @@ pub(crate) struct Args<T> {
 	pub(crate) body: T,
 
 	/// Cookies received from the useragent.
+	#[allow(dead_code)]
 	pub(crate) cookie: CookieJar,
 
 	/// Federation server authentication: X-Matrix origin

@@ -59,6 +59,9 @@ ldap = [
 lz4_compression = [
 	"tuwunel-service/lz4_compression",
 ]
+oauth = [
+	"tuwunel-service/oauth",
+]
 release_max_log_level = [
 	"tuwunel-core/release_max_log_level",
 	"tuwunel-service/release_max_log_level",

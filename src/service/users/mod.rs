@@ -65,8 +65,6 @@ struct Data {
 	userdeviceid_token: Arc<Map>,
 	userdeviceid_refresh: Arc<Map>,
 	userdeviceidalgorithm_fallback: Arc<Map>,
-	oidcdevice_userdeviceid: Arc<Map>,
-	oidccskeybypass_userid: Arc<Map>,
 	userfilterid_filter: Arc<Map>,
 	userid_avatarurl: Arc<Map>,
 	userid_blurhash: Arc<Map>,
@@ -82,6 +80,10 @@ struct Data {
 	userid_suspended: Arc<Map>,
 	userid_usersigningkeyid: Arc<Map>,
 	useridprofilekey_value: Arc<Map>,
+	#[cfg(feature = "oauth")]
+	oidccskeybypass_userid: Arc<Map>,
+	#[cfg(feature = "oauth")]
+	oidcdevice_userdeviceid: Arc<Map>,
 }
 
 impl crate::Service for Service {
@@ -94,8 +96,6 @@ impl crate::Service for Service {
 				onetimekeyid4225_otk: args.db.get("onetimekeyid4225_otk").ok().cloned(),
 				openidtoken_expiresatuserid: args.db["openidtoken_expiresatuserid"].clone(),
 				logintoken_expiresatuserid: args.db["logintoken_expiresatuserid"].clone(),
-				oidcdevice_userdeviceid: args.db["oidcdevice_userdeviceid"].clone(),
-				oidccskeybypass_userid: args.db["oidccskeybypass_userid"].clone(),
 				todeviceid_events: args.db["todeviceid_events"].clone(),
 				token_userdeviceid: args.db["token_userdeviceid"].clone(),
 				userdeviceid_metadata: args.db["userdeviceid_metadata"].clone(),
@@ -117,6 +117,10 @@ impl crate::Service for Service {
 				userid_suspended: args.db["userid_suspended"].clone(),
 				userid_usersigningkeyid: args.db["userid_usersigningkeyid"].clone(),
 				useridprofilekey_value: args.db["useridprofilekey_value"].clone(),
+				#[cfg(feature = "oauth")]
+				oidccskeybypass_userid: args.db["oidccskeybypass_userid"].clone(),
+				#[cfg(feature = "oauth")]
+				oidcdevice_userdeviceid: args.db["oidcdevice_userdeviceid"].clone(),
 			},
 		}))
 	}
@@ -172,6 +176,7 @@ impl Service {
 	/// Deactivate account
 	pub async fn deactivate_account(&self, user_id: &UserId) -> Result {
 		// Revoke any SSO authorizations
+		#[cfg(feature = "oauth")]
 		self.services
 			.oauth
 			.revoke_user_tokens(user_id)

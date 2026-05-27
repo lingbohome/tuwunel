@@ -59,6 +59,15 @@ fn dispatch_arm(v: &Variant, prefix: &str) -> Result<TokenStream2> {
 	if !matches!(&v.fields, Fields::Unnamed(_)) {
 		target = format!("{prefix}{target}");
 	}
+
+	let mut ts = TokenStream2::new();
+
+	for attr in &v.attrs {
+		if attr.meta.path().is_ident("cfg") {
+			attr.to_tokens(&mut ts);
+		}
+	}
+
 	let handler = Ident::new(&target, Span::call_site().into());
 	let res = match &v.fields {
 		// command with args
@@ -97,5 +106,7 @@ fn dispatch_arm(v: &Variant, prefix: &str) -> Result<TokenStream2> {
 		},
 	};
 
-	Ok(res)
+	res.to_tokens(&mut ts);
+
+	Ok(ts)
 }

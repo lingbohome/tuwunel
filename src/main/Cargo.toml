@@ -145,6 +145,12 @@ lz4_compression = [
 media_thumbnail = [
 	"tuwunel-service/media_thumbnail",
 ]
+oauth = [
+	"tuwunel-admin/oauth",
+	"tuwunel-api/oauth",
+	"tuwunel-router/oauth",
+	"tuwunel-service/oauth",
+]
 perf_measurements = [
 	"dep:opentelemetry",
 	"dep:opentelemetry-otlp",

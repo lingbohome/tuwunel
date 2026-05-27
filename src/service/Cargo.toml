@@ -66,6 +66,7 @@ lz4_compression = [
 media_thumbnail = [
 	"dep:image",
 ]
+oauth = []
 release_max_log_level = [
 	"tuwunel-core/release_max_log_level",
 	"tuwunel-database/release_max_log_level",

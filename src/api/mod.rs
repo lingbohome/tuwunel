@@ -1,6 +1,7 @@
 #![expect(clippy::toplevel_ref_arg)]
 
 pub mod client;
+#[cfg(feature = "oauth")]
 pub mod oidc;
 pub mod router;
 pub mod server;

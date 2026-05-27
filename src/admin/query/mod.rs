@@ -1,6 +1,7 @@
 mod account_data;
 mod appservice;
 mod globals;
+#[cfg(feature = "oauth")]
 mod oauth;
 mod presence;
 mod pusher;
@@ -18,13 +19,14 @@ mod users;
 use clap::Subcommand;
 use tuwunel_core::Result;
 
+#[cfg(feature = "oauth")]
+use self::oauth::OauthCommand;
 use self::{
 	account_data::AccountDataCommand, appservice::AppserviceCommand, globals::GlobalsCommand,
-	oauth::OauthCommand, presence::PresenceCommand, pusher::PusherCommand, raw::RawCommand,
-	resolver::ResolverCommand, room_alias::RoomAliasCommand,
-	room_state_cache::RoomStateCacheCommand, room_timeline::RoomTimelineCommand,
-	sending::SendingCommand, short::ShortCommand, storage::StorageCommand, sync::SyncCommand,
-	users::UsersCommand,
+	presence::PresenceCommand, pusher::PusherCommand, raw::RawCommand, resolver::ResolverCommand,
+	room_alias::RoomAliasCommand, room_state_cache::RoomStateCacheCommand,
+	room_timeline::RoomTimelineCommand, sending::SendingCommand, short::ShortCommand,
+	storage::StorageCommand, sync::SyncCommand, users::UsersCommand,
 };
 use crate::admin_command_dispatch;
 
@@ -88,6 +90,7 @@ pub(super) enum QueryCommand {
 	#[command(subcommand)]
 	Sync(SyncCommand),
 
+	#[cfg(feature = "oauth")]
 	/// - oauth service
 	#[command(subcommand)]
 	Oauth(OauthCommand),

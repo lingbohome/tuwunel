@@ -5,9 +5,8 @@ use ruma::{
 		client::uiaa::{AuthData, AuthFlow, AuthType, Jwt, UiaaInfo},
 	},
 };
-use serde_json::{json, value::to_raw_value};
 use tuwunel_core::{
-	Err, Error, Result, err, is_equal_to, utils,
+	Err, Error, Result, err, utils,
 	utils::{
 		OptionExt,
 		future::{OptionFutureExt, TryExtExt},
@@ -24,10 +23,6 @@ where
 	let sender_user = body.sender_user.as_deref();
 
 	let password_flow = [AuthType::Password];
-	let user_origin = sender_user
-		.map_async(|sender_user| services.users.origin(sender_user).ok())
-		.unwrap_or(None)
-		.await;
 	let has_password = sender_user
 		.map_async(|sender_user| {
 			services
@@ -50,45 +45,57 @@ where
 	//     created through a legacy path) but origin=="sso" and only one provider is
 	//     configured → routing is still unambiguous.
 	//  3. Otherwise: cannot determine provider → do NOT advertise m.login.sso.
-	let sso_flow = [AuthType::Sso];
-	let bound_idp: Option<String> = sender_user
-		.map_async(async |sender_user| {
-			body.sender_device
-				.as_deref()
-				.map_async(async |device_id| {
-					services
-						.users
-						.get_oidc_device_idp(sender_user, device_id)
-						.await
-						.filter(|s| !s.is_empty())
-				})
-				.await
-				.flatten()
-				.or_else(|| {
-					let use_sso = user_origin
-						.as_deref()
-						.is_some_and(is_equal_to!("sso"))
-						&& services.config.identity_provider.len() == 1;
+	#[cfg(feature = "oauth")]
+	let bound_idp: Option<String> = {
+		let user_origin = sender_user
+			.map_async(|sender_user| services.users.origin(sender_user).ok())
+			.unwrap_or(None)
+			.await;
 
-					use_sso
-						.then(|| services.oauth.providers.get_default_id())
-						.flatten()
-				})
-		})
-		.await
-		.flatten();
+		sender_user
+			.map_async(async |sender_user| {
+				body.sender_device
+					.as_deref()
+					.map_async(async |device_id| {
+						services
+							.users
+							.get_oidc_device_idp(sender_user, device_id)
+							.await
+							.filter(|s| !s.is_empty())
+					})
+					.await
+					.flatten()
+					.or_else(|| {
+						use tuwunel_core::is_equal_to;
 
+						let use_sso = user_origin
+							.as_deref()
+							.is_some_and(is_equal_to!("sso"))
+							&& services.config.identity_provider.len() == 1;
+
+						use_sso
+							.then(|| services.oauth.providers.get_default_id())
+							.flatten()
+					})
+			})
+			.await
+			.flatten()
+	};
+
+	#[cfg(feature = "oauth")]
 	let has_sso = bound_idp.is_some();
 
-	let jwt_flow = [AuthType::Jwt];
+	#[cfg(not(feature = "oauth"))]
+	let has_sso = false;
+
 	let has_jwt = services.config.jwt.enable;
 
 	let mut uiaainfo = UiaaInfo {
 		flows: has_password
 			.then_some(password_flow)
 			.into_iter()
-			.chain(has_sso.then_some(sso_flow))
-			.chain(has_jwt.then_some(jwt_flow))
+			.chain(has_sso.then_some([AuthType::Sso]))
+			.chain(has_jwt.then_some([AuthType::Jwt]))
 			.map(Vec::from)
 			.map(AuthFlow::new)
 			.collect(),
@@ -147,13 +154,18 @@ where
 				// Bind the exact IdP determined above into the UIAA session so
 				// the SSO fallback page can route re-authentication to the
 				// correct provider without any further heuristic lookups.
-				if let Some(ref idp) = bound_idp {
-					uiaainfo.params = to_raw_value(&json!({
-						"m.login.sso": {
-							"identity_providers": [{"id": idp}]
-						}
-					}))
-					.ok();
+				#[cfg(feature = "oauth")]
+				{
+					use serde_json::{json, value::to_raw_value};
+
+					if let Some(ref idp) = bound_idp {
+						uiaainfo.params = to_raw_value(&json!({
+							"m.login.sso": {
+								"identity_providers": [{"id": idp}]
+							}
+						}))
+						.ok();
+					}
 				}
 
 				services

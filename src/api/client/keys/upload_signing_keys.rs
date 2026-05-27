@@ -1,21 +1,9 @@
 use axum::extract::State;
 use ruma::{
-	UserId,
-	api::client::{
-		keys::upload_signing_keys,
-		uiaa::{AuthFlow, AuthType, UiaaInfo},
-	},
-	encryption::CrossSigningKey,
-	serde::Raw,
+	UserId, api::client::keys::upload_signing_keys, encryption::CrossSigningKey, serde::Raw,
 };
-use serde_json::{json, value::to_raw_value};
-use tuwunel_core::{
-	Err, Error, Result, debug, debug_error, err,
-	result::NotFound,
-	utils,
-	utils::{BoolExt, OptionExt},
-};
-use tuwunel_service::{Services, uiaa::SESSION_ID_LENGTH, users::parse_master_key};
+use tuwunel_core::{Err, Result, debug, debug_error, result::NotFound, utils::BoolExt};
+use tuwunel_service::{Services, users::parse_master_key};
 
 use crate::{Ruma, router::auth_uiaa};
 
@@ -71,31 +59,36 @@ pub(crate) async fn upload_signing_keys_route(
 		return persist_signing_keys(&services, &body).await;
 	}
 
-	let is_oidc = body
-		.sender_device()
-		.ok()
-		.map_async(|sender_device| {
-			services
-				.users
-				.is_oidc_device(sender_user, sender_device)
-		})
-		.await
-		.unwrap_or(false);
-
-	// MSC4312: OIDC devices require OAuth re-authentication for cross-signing
-	// reset. If a bypass was granted via SSO re-auth, skip UIAA entirely.
-	if is_oidc
-		&& services
-			.users
-			.can_replace_cross_signing_keys(sender_user)
-			.await
+	#[cfg(feature = "oauth")]
 	{
-		return persist_signing_keys(&services, &body).await;
-	}
+		use tuwunel_core::{Error, utils::OptionExt};
 
-	// First attempt from OIDC device: issue m.oauth flow.
-	if is_oidc && body.auth.is_none() {
-		return Err(Error::Uiaa(create_oauth_uiaa(&services, sender_user, &body)?));
+		let is_oidc = body
+			.sender_device()
+			.ok()
+			.map_async(|sender_device| {
+				services
+					.users
+					.is_oidc_device(sender_user, sender_device)
+			})
+			.await
+			.unwrap_or(false);
+
+		// MSC4312: OIDC devices require OAuth re-authentication for cross-signing
+		// reset. If a bypass was granted via SSO re-auth, skip UIAA entirely.
+		if is_oidc
+			&& services
+				.users
+				.can_replace_cross_signing_keys(sender_user)
+				.await
+		{
+			return persist_signing_keys(&services, &body).await;
+		}
+
+		// First attempt from OIDC device: issue m.oauth flow.
+		if is_oidc && body.auth.is_none() {
+			return Err(Error::Uiaa(create_oauth_uiaa(&services, sender_user, &body)?));
+		}
 	}
 
 	let authed_user = auth_uiaa(&services, &body).await?;
@@ -122,11 +115,17 @@ async fn persist_signing_keys(
 	Ok(upload_signing_keys::v3::Response {})
 }
 
+#[cfg(feature = "oauth")]
 fn create_oauth_uiaa(
 	services: &Services,
 	sender_user: &UserId,
 	body: &Ruma<upload_signing_keys::v3::Request>,
-) -> Result<UiaaInfo> {
+) -> Result<ruma::api::client::uiaa::UiaaInfo> {
+	use ruma::api::client::uiaa::{AuthFlow, AuthType, UiaaInfo};
+	use serde_json::{json, value::to_raw_value};
+	use tuwunel_core::{err, utils};
+	use tuwunel_service::uiaa::SESSION_ID_LENGTH;
+
 	let session = utils::random_string(SESSION_ID_LENGTH);
 	let base = services
 		.config

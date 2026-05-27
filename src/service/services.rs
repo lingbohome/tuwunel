@@ -12,7 +12,7 @@ use crate::{
 	account_data, admin, appservice, client, config, deactivate, emergency, federation, globals,
 	key_backups,
 	manager::Manager,
-	media, membership, oauth, presence, pusher, registration_tokens, resolver,
+	media, membership, presence, pusher, registration_tokens, resolver,
 	rooms::{self, retention},
 	sending, server_keys,
 	service::{Args, Service},
@@ -61,9 +61,10 @@ pub struct Services {
 	pub users: Arc<users::Service>,
 	pub membership: Arc<membership::Service>,
 	pub deactivate: Arc<deactivate::Service>,
-	pub oauth: Arc<oauth::Service>,
 	pub retention: Arc<retention::Service>,
 	pub registration_tokens: Arc<registration_tokens::Service>,
+	#[cfg(feature = "oauth")]
+	pub oauth: Arc<crate::oauth::Service>,
 
 	manager: Mutex<Option<Arc<Manager>>>,
 	pub server: Arc<Server>,
@@ -122,9 +123,10 @@ pub async fn build(server: Arc<Server>) -> Result<Arc<Self>> {
 		users: users::Service::build(&args)?,
 		membership: membership::Service::build(&args)?,
 		deactivate: deactivate::Service::build(&args)?,
-		oauth: oauth::Service::build(&args)?,
 		retention: retention::Service::build(&args)?,
 		registration_tokens: registration_tokens::Service::build(&args)?,
+		#[cfg(feature = "oauth")]
+		oauth: crate::oauth::Service::build(&args)?,
 
 		manager: Mutex::new(None),
 		server,
@@ -184,9 +186,10 @@ pub(crate) fn services(&self) -> impl Iterator<Item = Arc<dyn Service>> + Send {
 		cast!(self.users),
 		cast!(self.membership),
 		cast!(self.deactivate),
-		cast!(self.oauth),
 		cast!(self.retention),
 		cast!(self.registration_tokens),
+		#[cfg(feature = "oauth")]
+		cast!(self.oauth),
 	]
 	.into_iter()
 }

@@ -18,6 +18,7 @@ pub mod globals;
 pub mod key_backups;
 pub mod media;
 pub mod membership;
+#[cfg(feature = "oauth")]
 pub mod oauth;
 pub mod presence;
 pub mod pusher;
@@ -35,6 +36,7 @@ pub mod users;
 pub(crate) use once_services::OnceServices;
 pub(crate) use service::{Args, Service};
 
+#[allow(dead_code)]
 pub(crate) type SelfServices = std::sync::Arc<OnceServices>;
 
 use log as _;

@@ -17,8 +17,6 @@ use tuwunel_core::{
 };
 use tuwunel_database::{Deserialized, Json, Map};
 
-use crate::users::PASSWORD_SENTINEL;
-
 pub struct Service {
 	userdevicesessionid_uiaarequest: RwLock<RequestMap>,
 	db: Data,
@@ -110,12 +108,17 @@ pub async fn try_auth(
 			// Check if password is correct
 			let user_id = user_id_from_username;
 			let mut password_verified = false;
-			let mut password_sentinel = false;
 
 			// First try local password hash verification
-			if let Ok(hash) = self.services.users.password_hash(&user_id).await {
-				password_sentinel = hash == PASSWORD_SENTINEL;
-				password_verified = hash::verify_password(password, &hash).is_ok();
+			let hash = self
+				.services
+				.users
+				.password_hash(&user_id)
+				.await
+				.ok();
+
+			if let Some(hash) = &hash {
+				password_verified = hash::verify_password(password, hash).is_ok();
 			}
 
 			// If local password verification failed, try LDAP authentication
@@ -136,16 +139,23 @@ pub async fn try_auth(
 			}
 
 			// For SSO users that have never set a password, allow.
-			if !password_verified
-				&& password_sentinel
-				&& self
-					.services
-					.oauth
-					.sessions
-					.exists_for_user(&user_id)
-					.await
+			#[cfg(feature = "oauth")]
 			{
-				return Ok((true, uiaainfo));
+				use tuwunel_core::is_equal_to;
+
+				use crate::users::PASSWORD_SENTINEL;
+
+				if !password_verified
+					&& hash.is_some_and(is_equal_to!(PASSWORD_SENTINEL))
+					&& self
+						.services
+						.oauth
+						.sessions
+						.exists_for_user(&user_id)
+						.await
+				{
+					return Ok((true, uiaainfo));
+				}
 			}
 
 			if !password_verified {
@@ -185,6 +195,7 @@ pub async fn try_auth(
 			// A fallback acknowledgement is a session re-poll. The fallback
 			// web handler (e.g. the SSO callback) is what records completion.
 		},
+		#[cfg(feature = "oauth")]
 		| AuthData::OAuth(_) => {
 			// MSC4312: OAuth cross-signing reset uses SSO re-authentication.
 			// If a bypass was granted via SSO re-auth, mark OAuth as completed.
