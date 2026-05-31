@@ -182,7 +182,9 @@ fn base(config: &Config, name: Option<&str>) -> Result<ClientBuilder> {
 					Certificate::from_der(der).expect("certificate must be valid der encoding")
 				}),
 		)
-		.connection_verbose(cfg!(debug_assertions));
+		.connection_verbose(cfg!(debug_assertions))
+		// Check if env var is set to avoid locking the keyfile mutex on every connection open
+		.tls_sslkeylogfile(std::env::var_os("SSLKEYLOGFILE").is_some());
 
 	#[cfg(feature = "gzip_compression")]
 	{
