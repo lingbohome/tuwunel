@@ -12,7 +12,7 @@ use ruma::{
 	presence::PresenceState,
 	profile::{ProfileFieldName, ProfileFieldValue},
 };
-use tuwunel_core::{Err, Result, err};
+use tuwunel_core::{Err, Result, err, info};
 use tuwunel_service::users::propagation_default;
 
 use super::profile::{profile_mxc, profile_str, resolve_propagation};
@@ -66,18 +66,12 @@ pub(crate) async fn set_profile_field_route(
 	ClientIp(client): ClientIp,
 	body: Ruma<set_profile_field::v3::Request>,
 ) -> Result<set_profile_field::v3::Response> {
+	info!("set_profile_field_route");
+
 	let sender_user = body.sender_user();
 
 	if *sender_user != body.user_id && body.appservice_info.is_none() {
 		return Err!(Request(Forbidden("You cannot update the profile of another user")));
-	}
-
-	// MSC3823: displayname/avatar are forbidden during suspension; custom
-	// MSC4133 fields fall through.
-	if matches!(body.value, ProfileFieldValue::DisplayName(_) | ProfileFieldValue::AvatarUrl(_))
-		&& services.users.is_suspended(sender_user).await
-	{
-		return Err!(Request(UserSuspended("Account is suspended.")));
 	}
 
 	if body.value.field_name().as_str().len() > 128 {
@@ -169,14 +163,6 @@ pub(crate) async fn delete_profile_field_route(
 
 	if *sender_user != body.user_id && body.appservice_info.is_none() {
 		return Err!(Request(Forbidden("You cannot update the profile of another user")));
-	}
-
-	// MSC3823: displayname/avatar are forbidden during suspension; custom
-	// MSC4133 fields fall through.
-	if matches!(body.field, ProfileFieldName::DisplayName | ProfileFieldName::AvatarUrl)
-		&& services.users.is_suspended(sender_user).await
-	{
-		return Err!(Request(UserSuspended("Account is suspended.")));
 	}
 
 	let propagation = resolve_propagation(

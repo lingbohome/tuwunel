@@ -17,7 +17,7 @@ use ruma::{
 	presence::PresenceState,
 };
 use serde_json::Value as JsonValue;
-use tuwunel_core::{Err, Result, utils::future::TryExtExt};
+use tuwunel_core::{Err, Result, info, utils::future::TryExtExt};
 use tuwunel_service::users::{Propagation, propagation_default};
 
 use crate::{ClientIp, Ruma};
@@ -177,6 +177,8 @@ pub(crate) async fn set_avatar_url_route(
 	ClientIp(client): ClientIp,
 	body: Ruma<set_avatar_url::v3::Request>,
 ) -> Result<set_avatar_url::v3::Response> {
+	info!("set_avatar_url_route");
+
 	let sender_user = body.sender_user();
 
 	if *sender_user != body.user_id && body.appservice_info.is_none() {
