@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+
+FROM rust:1.94.0 AS builder
+
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+    cmake clang libclang-dev libssl-dev librocksdb-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/tuwunel
+COPY . .
+
+RUN cargo build \
+    --locked \
+    --profile release \
+    -p tuwunel \
+    --target x86_64-unknown-linux-gnu \
+    && mv target/x86_64-unknown-linux-gnu/release/tuwunel /usr/local/bin/tuwunel \
+    && strip /usr/local/bin/tuwunel
+
+FROM debian:testing-slim
+
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+    ca-certificates librocksdb-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/bin/tuwunel /usr/local/bin/tuwunel
+
+EXPOSE 6167 8008 8448
+ENTRYPOINT ["/usr/local/bin/tuwunel"]
