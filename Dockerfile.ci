@@ -19,8 +19,13 @@ RUN cargo build \
 
 FROM debian:testing-slim
 
+# Runtime packages matching official bake.hcl runtime target (default feat_set="all"):
+#   adduser, ca-certificates, bzip2, libjemalloc2, liblz4-1, liburing2, libzstd1
+#   + libstdc++6 libgcc-s1 (needed for RocksDB C++ runtime)
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-    ca-certificates librocksdb-dev liburing-dev \
+    adduser ca-certificates \
+    libstdc++6 libgcc-s1 \
+    libjemalloc2 liburing2 liblz4-1 libzstd1 bzip2 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/bin/tuwunel /usr/local/bin/tuwunel
