@@ -20,7 +20,7 @@ RUN cargo build \
 FROM debian:testing-slim
 
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-    ca-certificates librocksdb-dev \
+    ca-certificates librocksdb-dev liburing-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/bin/tuwunel /usr/local/bin/tuwunel
